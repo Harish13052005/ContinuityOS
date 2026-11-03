@@ -1,0 +1,12 @@
+import sqlite3
+conn = sqlite3.connect(r'C:\Users\Hp\Documents\GitHub\ContinuityOS\backend\.runtime.db')
+cursor = conn.cursor()
+cursor.execute('SELECT count(*) FROM project')
+print('Projects:', cursor.fetchone()[0])
+cursor.execute('SELECT count(*) FROM source')
+print('Sources:', cursor.fetchone()[0])
+cursor.execute('SELECT count(*) FROM extracted_item')
+print('Extracted items:', cursor.fetchone()[0])
+cursor.execute('SELECT count(*) FROM handover')
+print('Handovers:', cursor.fetchone()[0])
+conn.close()

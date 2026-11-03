@@ -88,6 +88,42 @@ $env:DATABASE_URL = "sqlite:///./.runtime.db"
 
 It adds the three public portfolio projects and a fictional **ContinuityOS Reviewer Walkthrough** workspace. The synthetic workspace contains two contradictory decisions, an outdated sample milestone, an unassigned task, and a private synthetic source to demonstrate review and access filtering. It does not contain real customer information. Seeded collaborators are project membership examples; their passwords are generated and are not demo sign-in accounts. Use the owner account you registered to walk through review, approval, sharing, and PDF export.
 
+## Screenshots
+
+Below are screenshots of the three public portfolio projects demonstrating the ContinuityOS knowledge handover platform capabilities:
+
+### CareerGraph AI
+![CareerGraph AI Dashboard](/portfolio/careergraph/dashboard.jpeg)
+*Career exploration platform with interactive career graph*
+
+![CareerGraph AI Graph](/portfolio/careergraph/graph.jpeg)
+*Interactive career relationship graph*
+
+![CareerGraph AI Career Paths](/portfolio/careergraph/career-path.jpeg)
+*Career path recommendations*
+
+### AI Money Mentor
+![AI Money Mentor Dashboard](/portfolio/money-mentor/dashboard.jpeg)
+*Personal finance planning dashboard*
+
+![AI Money Mentor Financial Plan](/portfolio/money-mentor/financial-plan.jpeg)
+*Example financial plan view*
+
+![AI Money Mentor Explanation](/portfolio/money-mentor/explanation.jpeg)
+*Example financial explanation view*
+
+### ParkSense
+![ParkSense Admin Dashboard](/portfolio/parksense/admin-dashboard.jpg)
+*Operations dashboard with bay occupancy map*
+
+![ParkSense Bay Manager](/portfolio/parksense/bay-manager.jpg)
+*Parking bay management view*
+
+![ParkSense Customer Dashboard](/portfolio/parksense/customer-dashboard.jpg)
+*Customer view with bay allocation*
+
+---
+
 ## Docker Compose
 
 The Compose frontend is a built static app served by Nginx, with SPA routing and a health check. The API and PostgreSQL have health checks, and uploaded source files use a persistent local Docker volume. Compose is a self-hosted starting point, not a completed cloud deployment: put it behind HTTPS, configure a durable private object store for uploaded files, set the public API URL and CORS origins, and use managed PostgreSQL before production use.
