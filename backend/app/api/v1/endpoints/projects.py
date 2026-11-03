@@ -9,7 +9,7 @@ from app.models.user import User
 from app.models.handover import Handover
 from app.models.project_member import ProjectMember
 from app.models.audit_log import AuditLog
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from app.models.user import User as ProjectUser
 from app.schemas.project import ProjectMemberInvite
 
@@ -33,8 +33,12 @@ def create_project(payload: ProjectCreate, current_user: User = Depends(get_curr
 
 @router.get("", response_model=list[ProjectRead])
 def list_projects(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """List projects owned by the authenticated user."""
-    return db.query(Project).filter(Project.owner_id == current_user.id).all()
+    """List projects owned by or shared with the authenticated user."""
+    member_ids = select(ProjectMember.project_id).where(
+        ProjectMember.user_id == current_user.id,
+        ProjectMember.project_role != "recipient",
+    )
+    return db.scalars(select(Project).where(or_(Project.owner_id == current_user.id, Project.id.in_(member_ids))).order_by(Project.created_at.desc())).all()
 
 
 @router.get("/{project_id}", response_model=ProjectRead)

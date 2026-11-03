@@ -1,31 +1,108 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, type DashboardData } from '../lib/api'
+import { api, type DashboardData, type ExtractedItem } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { asList, formatKind, formatStatus, itemLabels, statusTone } from '../lib/format'
 
-const palette = ['#635bff', '#0e9f8a', '#f59e0b', '#ef5b73', '#4084f4', '#9a68d7', '#78a33b', '#94a3b8']
-const itemLabels: Record<string, string> = { decision: 'Decisions', task: 'Tasks', risk: 'Risks', blocker: 'Blockers', dependency: 'Dependencies', question: 'Questions', milestone: 'Milestones', responsibility: 'Responsibilities' }
+type Row = ExtractedItem & { project_id: string; project_name: string }
+
+const tabs = ['all', 'decision', 'task', 'risk', 'question'] as const
 
 export const InsightsPage = () => {
   const { user } = useAuth()
   const [data, setData] = useState<DashboardData | null>(null)
+  const [rows, setRows] = useState<Row[]>([])
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [tab, setTab] = useState<(typeof tabs)[number]>('all')
+
   useEffect(() => {
-    if (user) api.dashboard.get().then(response => setData(response.data)).catch((err: Error) => setError(err.message || 'Could not load insights'))
+    if (!user) return
+    let active = true
+    api.dashboard.get()
+      .then(async response => {
+        const summary = response.data as DashboardData
+        const items = await Promise.all(asList<DashboardData['projects'][number]>(summary.projects).map(async project => {
+          try {
+            const result = await api.extractedItems.list(project.id)
+            return asList<ExtractedItem>(result.data).map(item => ({ ...item, project_id: project.id, project_name: project.name }))
+          } catch {
+            return []
+          }
+        }))
+        if (!active) return
+        setData(summary)
+        setRows(items.flat())
+      })
+      .catch((err: Error) => { if (active) setError(err.message || 'Could not load knowledge') })
+    return () => { active = false }
   }, [user])
 
-  const projects = useMemo(() => data?.projects.filter(project => project.name.toLowerCase().includes(search.toLowerCase())) || [], [data, search])
-  if (error) return <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">{error}</div>
-  if (!data) return <div className="h-40 animate-pulse rounded-2xl bg-slate-100" />
-  const maxCount = Math.max(1, ...data.knowledge_by_type.map(item => item.count))
+  const filtered = useMemo(() => rows.filter(row => {
+    const matchesTab = tab === 'all' || row.item_type === tab
+    const query = search.toLowerCase()
+    return matchesTab && `${row.title} ${row.content} ${row.project_name}`.toLowerCase().includes(query)
+  }), [rows, tab, search])
 
-  return <div className="space-y-6 pb-8">
-    <header className="rounded-[1.75rem] bg-gradient-to-br from-[#202445] via-[#292c54] to-[#344a62] p-6 text-white sm:p-8"><p className="text-xs font-semibold uppercase tracking-[.15em] text-teal-200">Workspace analytics</p><div className="mt-2 flex flex-wrap items-end justify-between gap-5"><div><h1 className="text-3xl font-semibold tracking-tight">Knowledge insights</h1><p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">See which decisions, actions, risks and milestones are shaping the project portfolio.</p></div><div className="flex gap-6"><div><strong className="block text-2xl">{data.stats.knowledge_items}</strong><span className="text-xs text-slate-300">captured items</span></div><div><strong className="block text-2xl">{data.stats.projects}</strong><span className="text-xs text-slate-300">projects</span></div></div></div></header>
-    <div className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6"><div className="mb-5"><p className="text-xs font-semibold uppercase tracking-[.13em] text-indigo-600">Portfolio breakdown</p><h2 className="mt-1 text-lg font-semibold text-slate-900">Knowledge by category</h2><p className="mt-1 text-sm text-slate-500">Counts use all captured items across your projects.</p></div><div className="space-y-4">{data.knowledge_by_type.map((item, index) => <div key={item.type}><div className="mb-1.5 flex justify-between gap-3 text-sm"><span className="font-medium text-slate-700">{itemLabels[item.type] || item.type}</span><span className="tabular-nums text-slate-500">{item.count}</span></div><div className="h-2.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full transition-all" style={{ width: `${Math.max(3, item.count / maxCount * 100)}%`, backgroundColor: palette[index % palette.length] }} /></div></div>)}{!data.knowledge_by_type.length && <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">Your insights will appear here after source material has been added and processed.</p>}</div></section>
-      <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6"><p className="text-xs font-semibold uppercase tracking-[.13em] text-teal-700">Project coverage</p><h2 className="mt-1 text-lg font-semibold text-slate-900">Where knowledge lives</h2><p className="mt-1 text-sm text-slate-500">Compare how much context is available across projects.</p><div className="mt-5 space-y-4">{data.projects.slice().sort((a, b) => b.knowledge_count - a.knowledge_count).map(project => <Link key={project.id} to={`/projects/${project.id}`} className="block rounded-xl border border-slate-100 p-3 transition hover:border-indigo-200 hover:bg-indigo-50/30"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-800">{project.name}</p><p className="mt-1 text-xs text-slate-500">{project.source_count} sources · {project.members.length} teammates</p></div><span className="shrink-0 text-xs font-semibold text-indigo-700">{project.knowledge_count} items</span></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-teal-400" style={{ width: `${Math.min(100, project.knowledge_count / maxCount * 100)}%` }}/></div></Link>)}</div></section>
+  if (error) return <div role="alert" className="card p-5 text-rose-700">{error}</div>
+  if (!data) return <div className="h-40 animate-pulse rounded-2xl bg-white" />
+
+  return (
+    <div className="space-y-6 pb-8 rise">
+      <header className="rounded-[1.75rem] bg-gradient-to-br from-[#202445] via-[#292c54] to-[#344a62] p-6 text-white sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[.15em] text-teal-200">Reconstructed knowledge</p>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">Knowledge items</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">Structured project insights with evidence, confidence and verification labels.</p>
+          </div>
+          <div className="flex gap-6">
+            <div><strong className="block text-2xl">{rows.length}</strong><span className="text-xs text-slate-300">captured items</span></div>
+            <div><strong className="block text-2xl">{data.stats.projects}</strong><span className="text-xs text-slate-300">projects</span></div>
+          </div>
+        </div>
+      </header>
+
+      <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
+          <div className="flex flex-wrap gap-2">
+            {tabs.map(item => (
+              <button key={item} type="button" onClick={() => setTab(item)} className={`tab-btn ${tab === item ? 'tab-btn-on' : 'tab-btn-off'}`}>
+                {item === 'all' ? 'All items' : itemLabels[item]}
+              </button>
+            ))}
+          </div>
+          <input aria-label="Search knowledge" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search insights" className="soft-input sm:w-56" />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Type</th>
+                <th className="px-4 py-3 font-semibold">Insight</th>
+                <th className="px-4 py-3 font-semibold">Project</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Confidence</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filtered.map(row => (
+                <tr key={row.id} className="hover:bg-indigo-50/40">
+                  <td className="px-4 py-3"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase text-slate-600">{formatKind(row.item_type)}</span></td>
+                  <td className="px-4 py-3">
+                    <Link to={`/projects/${row.project_id}`} className="font-medium text-slate-900 hover:text-indigo-700">{row.title}</Link>
+                    <p className="mt-1 line-clamp-2 max-w-xl text-xs text-slate-500">{row.content}</p>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{row.project_name}</td>
+                  <td className="px-4 py-3"><span className={statusTone[row.verification_status || 'unverified']}>{formatStatus(row.verification_status)}</span></td>
+                  <td className="px-4 py-3 text-xs font-semibold text-slate-700">{row.confidence == null ? '—' : row.confidence >= 80 ? 'High' : row.confidence >= 50 ? 'Medium' : 'Low'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!filtered.length && <p className="p-8 text-center text-sm text-slate-500">No knowledge items match this view yet. Connect sources and run extraction.</p>}
+        </div>
+      </section>
     </div>
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6"><div className="mb-4 flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[.13em] text-violet-700">Explore</p><h2 className="mt-1 text-lg font-semibold text-slate-900">Browse project memory</h2><p className="mt-1 text-sm text-slate-500">Open a project to review source-backed decisions and follow-ups.</p></div><input aria-label="Search projects" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search projects" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50 sm:w-56"/></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{projects.map(project => <Link key={project.id} to={`/projects/${project.id}`} className="group rounded-xl border border-slate-200 p-4 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"><div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold text-slate-800 group-hover:text-indigo-700">{project.name}</h3><span className="text-indigo-500">↗</span></div><p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-slate-500">{project.description || 'Project memory and source-backed knowledge.'}</p><p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">{project.knowledge_count} items · {project.source_count} sources</p></Link>)}</div>{!projects.length && <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No projects match that search.</p>}</section>
-  </div>
+  )
 }

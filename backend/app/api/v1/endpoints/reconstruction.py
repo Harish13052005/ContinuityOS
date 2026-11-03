@@ -22,6 +22,7 @@ from app.ai.reconstruction_service import reconstruct_project_state
 router = APIRouter(prefix="/reconstruction", tags=["reconstruction"])
 
 
+@router.get("/project/{project_id}/state", response_model=ProjectReconstructionResponse)
 @router.post("/project/{project_id}/state", response_model=ProjectReconstructionResponse)
 async def get_project_reconstruction(
     project_id: str,

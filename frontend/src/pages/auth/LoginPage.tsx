@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
+import { useAuth } from '../../lib/auth'
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('')
@@ -9,6 +10,7 @@ export const LoginPage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
+  const { signIn, token } = useAuth()
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -16,12 +18,16 @@ export const LoginPage = () => {
     setError(null)
     try {
       const response = await api.auth.login({ username: email, password })
-      localStorage.setItem('token', response.data.access_token)
+      const accessToken = response.data?.access_token
+      if (!accessToken) throw new Error('Sign-in succeeded but no session token was returned.')
+      await signIn(accessToken)
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign in. Check your details and try again.')
     } finally { setLoading(false) }
   }
+
+  if (token) return <Navigate to="/" replace />
 
   return <main className="grid min-h-screen bg-white lg:grid-cols-[1.05fr_.95fr]">
     <section className="relative isolate hidden overflow-hidden bg-[#202445] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between xl:px-20"><div aria-hidden="true" className="absolute -right-32 top-[-5rem] -z-10 h-[34rem] w-[34rem] rounded-full border border-white/[.08]"/><div aria-hidden="true" className="absolute -right-12 top-12 -z-10 h-[27rem] w-[27rem] rounded-full border border-white/[.08]"/><div aria-hidden="true" className="absolute right-12 top-32 -z-10 h-[19rem] w-[19rem] rounded-full border border-white/[.08]"/><div aria-hidden="true" className="absolute bottom-[-8rem] left-[-8rem] -z-10 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl"/>
