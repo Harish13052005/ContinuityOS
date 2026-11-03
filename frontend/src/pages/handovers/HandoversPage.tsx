@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../../lib/api'
+import { api, type Handover } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -8,7 +8,7 @@ export const HandoversPage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
 
-  const [handovers, setHandovers] = useState([])
+  const [handovers, setHandovers] = useState<Handover[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

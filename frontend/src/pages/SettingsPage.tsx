@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api } from '../../lib/api'
-import { useAuth } from '../../lib/auth'
+import { api } from '../lib/api'
+import { useAuth } from '../lib/auth'
 
 export const SettingsPage = () => {
   const { user } = useAuth()
@@ -45,8 +45,8 @@ export const SettingsPage = () => {
     e.preventDefault()
     setError(null)
     try {
-      await api.auth.getCurrentUser()
-      // Profile updated successfully
+      const response = await api.auth.updateCurrentUser({ full_name: profile.fullName })
+      setProfile({ fullName: response.data.full_name, email: response.data.email })
     } catch (err: any) {
       setError(err.message || 'Failed to update profile')
     }

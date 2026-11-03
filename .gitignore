@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+backend/storage/
+backend/.runtime.db
+backend/.runtime.db-shm
+backend/.runtime.db-wal

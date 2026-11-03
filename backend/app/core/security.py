@@ -1,11 +1,10 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Set
+from typing import Any, Set
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
-from app.models.user import User  # Add this import
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
@@ -25,7 +24,12 @@ def create_access_token(subject: Any, expires_delta: timedelta | None = None) ->
     if expires_delta is None:
         expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode = {"exp": expire}
+    if isinstance(subject, dict):
+        to_encode.update(subject)
+        to_encode["sub"] = str(subject.get("sub", ""))
+    else:
+        to_encode["sub"] = str(subject)
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
@@ -44,9 +48,3 @@ def is_token_blacklisted(jti: str) -> bool:
 def blacklist_token(jti: str) -> None:
     """Add a token JTI to the blacklist to invalidate it."""
     BLACKLISTED_TOKENS.add(jti)
-
-
-def get_current_user(token: str = ...) -> User:
-    """Dependency that returns the current authenticated user, or raises 401."""
-    # This is a placeholder; the actual dependency is defined in endpoints
-    pass

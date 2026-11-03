@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react'
-
 // API client for ContinuityOS backend
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -15,17 +13,41 @@ export interface ErrorResponse {
   errors?: Record<string, string[]>
 }
 
+export interface Project { id: string; name: string; description?: string | null; created_at?: string; members?: unknown[] }
+export interface Source { id: string; filename: string; source_type: string; created_at: string; page_count?: number }
+export interface ExtractedItem { id: string; title: string; item_type: string; content: string; confidence?: number; verification_status?: string; created_at: string }
+export interface Handover {
+  id: string; project_id: string; title: string; status: string; version: number; created_at: string
+  project_overview?: string | null; current_status?: string | null; decisions?: string | null
+  pending_tasks?: string | null; dependencies_blockers?: string | null; risks_questions?: string | null
+  milestones?: string | null; next_actions?: string | null; missing_conflicting?: string | null
+}
+export interface DashboardProject extends Project { source_count: number; knowledge_count: number; handover_count: number; members: { full_name: string; role: string }[] }
+export interface DashboardData {
+  stats: { projects: number; sources: number; knowledge_items: number; handovers: number; collaborators: number }
+  projects: DashboardProject[]
+  knowledge_by_type: { type: string; count: number }[]
+  recent_items: { id: string; project_id: string; item_type: string; title: string; verification_status: string; created_at: string }[]
+  recent_handovers: { id: string; project_id: string; title: string; status: string; created_at: string }[]
+}
+
 const handleResponse = async (response: Response) => {
-  const data = await response.json()
+  const data = response.status === 204 ? null : await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(data.message || 'Request failed')
+    const detail = data?.detail || data?.message
+    throw new Error(typeof detail === 'string' ? detail : 'Request failed')
   }
 
-  return data
+  return { data }
 }
 
 export const api = {
+  dashboard: {
+    get: () => fetch(`${API_BASE}/api/v1/dashboard`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
+  },
   // Auth endpoints
   auth: {
     register: (payload: { email: string; full_name: string; password: string }) =>
@@ -45,11 +67,17 @@ export const api = {
     logout: () =>
       fetch(`${API_BASE}/api/v1/auth/logout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }).then(handleResponse),
 
     getCurrentUser: () => fetch(`${API_BASE}/api/v1/auth/me`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
+
+    updateCurrentUser: (payload: { full_name: string }) => fetch(`${API_BASE}/api/v1/auth/me`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify(payload),
     }).then(handleResponse),
   },
 
@@ -81,6 +109,16 @@ export const api = {
       fetch(`${API_BASE}/api/v1/projects/${projectId}/sources`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }).then(handleResponse),
+
+    upload: (projectId: string, file: File) => {
+      const form = new FormData()
+      form.append('file', file)
+      return fetch(`${API_BASE}/api/v1/projects/${projectId}/sources`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: form,
+      }).then(handleResponse)
+    },
 
     create: (projectId: string, payload: { filename: string; source_type: string }) =>
       fetch(`${API_BASE}/api/v1/projects/${projectId}/sources`, {
@@ -132,12 +170,23 @@ export const api = {
       }).then(handleResponse),
   },
 
+  extraction: {
+    fromSource: (sourceId: string) => fetch(`${API_BASE}/api/v1/extraction/source/${sourceId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
+  },
+
   // Handovers endpoints
   handovers: {
     list: (projectId: string) =>
-      fetch(`${API_BASE}/api/v1/projects/${projectId}/handovers`, {
+      fetch(`${API_BASE}/api/v1${projectId ? `/projects/${projectId}/handovers` : '/handovers'}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }).then(handleResponse),
+
+    get: (handoverId: string) => fetch(`${API_BASE}/api/v1/handovers/${handoverId}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
 
     create: (projectId: string, payload: {
       title: string
@@ -163,5 +212,3 @@ export const api = {
       }).then(handleResponse),
   },
 }
-
-export type { ApiResponse, ErrorResponse }

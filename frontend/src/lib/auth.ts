@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api } from '../lib/api'
 import { useNavigate } from 'react-router-dom'
+import { api } from './api'
 
 export interface User {
   id: string
@@ -11,29 +11,29 @@ export interface User {
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(Boolean(localStorage.getItem('token')))
+  const navigate = useNavigate()
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const response = await api.auth.getCurrentUser()
-        setUser(response.data)
-      } catch (error) {
-        // User not authenticated, redirect to login
-        localStorage.removeItem('token')
-        navigate('/login')
-      } finally {
-        setLoading(false)
-      }
+    if (!localStorage.getItem('token')) {
+      setLoading(false)
+      return
     }
 
-    loadUser()
-  }, [])
+    let active = true
+    api.auth.getCurrentUser()
+      .then(response => { if (active) setUser(response.data) })
+      .catch(() => {
+        localStorage.removeItem('token')
+        if (active) {
+          setUser(null)
+          navigate('/login', { replace: true })
+        }
+      })
+      .finally(() => { if (active) setLoading(false) })
+
+    return () => { active = false }
+  }, [navigate])
 
   return { user, loading }
-}
-
-export const useNavigate = () => {
-  const navigate = useNavigate()
-  return navigate
 }

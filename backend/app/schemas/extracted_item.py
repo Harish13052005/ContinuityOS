@@ -1,11 +1,12 @@
-from pydantic import BaseModel
+from datetime import datetime
+from pydantic import BaseModel, Field
 
 
 class ExtractedItemBase(BaseModel):
     item_type: str  # decision, task, risk, dependency, blocker, question, responsibility, milestone
     title: str
     content: str
-    confidence: int = 80  # 0-100
+    confidence: int = Field(default=80, ge=0, le=100)
     verification_status: str = "pending"  # pending, verified, disputed
 
 
@@ -18,6 +19,6 @@ class ExtractedItemRead(ExtractedItemBase):
     id: str
     project_id: str
     source_id: str | None
-    created_at: str
+    created_at: datetime
 
     model_config = {"from_attributes": True}

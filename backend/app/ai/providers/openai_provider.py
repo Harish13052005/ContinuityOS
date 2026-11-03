@@ -1,10 +1,12 @@
 """OpenAI GPT provider for ContinuityOS AI extraction."""
 
 import os
-import time
 from typing import Optional
 
-import openai
+try:
+    import openai
+except ImportError:
+    openai = None
 
 from app.ai.providers.base import LLMProvider
 
@@ -15,7 +17,7 @@ class OpenAIProvider(LLMProvider):
     def __init__(self) -> None:
         self.api_key = os.environ.get("OPENAI_API_KEY", "")
         self.model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-        self._client = openai.OpenAI(api_key=self.api_key) if self.api_key else None
+        self._client = openai.OpenAI(api_key=self.api_key) if self.api_key and openai else None
 
     @property
     def name(self) -> str:
@@ -44,11 +46,5 @@ class OpenAIProvider(LLMProvider):
             )
             content = response.choices[0].message.content
             return content.strip(), None
-        except openai.RateLimitError as e:
-            return None, f"Rate limit error: {str(e)}"
-        except openai.APIError as e:
-            return None, f"API error: {str(e)}"
-        except openai.APIConnectionError as e:
-            return None, f"Connection error: {str(e)}"
         except Exception as e:
             return None, f"Unexpected error: {str(e)}"

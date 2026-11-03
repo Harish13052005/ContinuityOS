@@ -22,7 +22,7 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy ..\.env.example .env
-# edit .env as needed
+# Replace SECRET_KEY and configure DATABASE_URL before starting
 alembic upgrade head
 uvicorn app.main:app --reload
 ```
@@ -49,10 +49,14 @@ pytest -q
 ## Docker
 
 ```bash
+copy .env.example .env
+# Set unique SECRET_KEY and POSTGRES_PASSWORD values in .env
 docker compose up --build
 ```
 
-## Notes
+## Current behavior
 
-- Step 1 scaffolding only. Document processing, AI extraction, reporting and advanced authz come in later phases.
-- Never invent information absent from source documents; every extracted claim must retain its source reference (enforced in later phases).
+- The API supports accounts, authenticated project management, source uploads, rule-based text extraction, and project knowledge reconstruction.
+- Source uploads are limited to 10 MB. TXT, Markdown, CSV, and JSON can be extracted; PDF and DOCX files can be stored but require a document parser before extraction.
+- LLM extraction is optional and requires a provider SDK, API key, and `LLM_PROVIDER` setting. Every saved extracted item must include an excerpt found verbatim in its source.
+- The Compose frontend runs Vite for development. Use a separately configured static frontend host and HTTPS reverse proxy for deployment.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api } from '../lib/api'
-import { useAuth } from '../lib/auth'
+import { api, type Project, type Source } from '../../lib/api'
+import { useAuth } from '../../lib/auth'
 import { useNavigate, useParams } from 'react-router-dom'
 
 export const ProjectPage = () => {
@@ -8,8 +8,8 @@ export const ProjectPage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
 
-  const [project, setProject] = useState(null)
-  const [sources, setSources] = useState([])
+  const [project, setProject] = useState<Project | null>(null)
+  const [sources, setSources] = useState<Source[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,7 +19,7 @@ export const ProjectPage = () => {
         const projectResp = await api.projects.get(projectId!)
         setProject(projectResp.data)
         const sourcesResp = await api.sources.list(projectId!)
-        setSources(sourcesResp.data)
+        setSources(sourcesResp.data.sources)
       } catch (err: any) {
         setError(err.message || 'Failed to load project')
         navigate('/projects')

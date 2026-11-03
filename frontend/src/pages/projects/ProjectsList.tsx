@@ -1,78 +1,21 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { api } from '../../lib/api'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { api, type DashboardData } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 
 export const ProjectsList = () => {
   const { user } = useAuth()
-  const navigate = useNavigate()
-  const [projects, setProjects] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [search, setSearch] = useState('')
   const [error, setError] = useState<string | null>(null)
+  useEffect(() => { if (user) api.dashboard.get().then(response => setData(response.data)).catch((err: Error) => setError(err.message || 'Could not load projects')) }, [user])
+  const projects = useMemo(() => data?.projects.filter(project => `${project.name} ${project.description || ''}`.toLowerCase().includes(search.toLowerCase())) || [], [data, search])
 
-  useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const response = await api.projects.list()
-        setProjects(response.data)
-      } catch (err: any) {
-        setError(err.message || 'Failed to load projects')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (user) {
-      loadProjects()
-    }
-  }, [user])
-
-  if (loading) {
-    return (
-      <div className="p-6 sm:p-8">
-        <div className="animate-spin rounded-full border-4 border-indigo-200 border-t-4 w-8 h-8 mb-4"></div>
-        <p className="text-slate-600">Loading projects...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded mb-4">
-        <p className="font-medium">{error}</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {!projects.length && (
-        <p className="text-slate-500 text-sm">No projects found. <Link to="/projects/create" className="font-medium text-indigo-600 underline">Create your first project</Link></p>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {projects.map((project) => (
-          <div
-            key={project.id}
-            className="bg-white rounded-lg p-6 hover:bg-slate-50 transition-colors border border-slate-200"
-          >
-            <h3 className="text-lg font-medium text-slate-900 line-clamp-2">{project.name}</h3>
-            <p className="text-slate-500 text-sm line-clamp-1 mt-1">{project.description || 'No description'}</p>
-            <div className="mt-3 flex items-center gap-2 text-slate-400 text-sm">
-              <span>{project.members?.length || 0} members</span>
-            </div>
-            <Link
-              to={`/projects/${project.id}`}
-              className="mt-3 inline-flex items-center text-indigo-600 rounded border border-indigo-600 px-3 py-1 text-sm hover:bg-indigo-50 transition-colors"
-            >
-              View Project
-              <svg className="w-3 h-3 ml-1" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 13l4 4L19 7" />
-              </svg>
-            </Link>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+  if (error) return <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">{error}</div>
+  if (!data) return <div className="h-48 animate-pulse rounded-2xl bg-slate-100" />
+  return <div className="space-y-6 pb-8">
+    <header className="flex flex-wrap items-end justify-between gap-5"><div><p className="text-xs font-semibold uppercase tracking-[.14em] text-indigo-600">Portfolio</p><h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Projects</h1><p className="mt-2 text-sm text-slate-500">A connected home for project context, decisions and delivery.</p></div><Link to="/projects/create" className="rounded-xl bg-[#242852] px-4 py-3 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-800">＋ Create project</Link></header>
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><div className="flex gap-6"><div><strong className="block text-xl text-slate-900">{data.stats.projects}</strong><span className="text-xs text-slate-500">projects</span></div><div><strong className="block text-xl text-slate-900">{data.stats.sources}</strong><span className="text-xs text-slate-500">sources</span></div><div><strong className="block text-xl text-slate-900">{data.stats.knowledge_items}</strong><span className="text-xs text-slate-500">insights</span></div></div><input aria-label="Search projects" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by project name" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50 sm:w-64" /></div>
+    {projects.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{projects.map((project, index) => <article key={project.id} className="group overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_3px_12px_rgba(26,35,60,.035)] transition hover:-translate-y-1 hover:shadow-[0_14px_30px_-20px_rgba(45,52,120,.45)]"><div className={`h-1.5 ${['bg-gradient-to-r from-indigo-500 to-violet-400','bg-gradient-to-r from-teal-500 to-cyan-400','bg-gradient-to-r from-amber-400 to-orange-400'][index % 3]}`} /><div className="p-5"><div className="flex items-start justify-between gap-3"><span className={`flex h-11 w-11 items-center justify-center rounded-[14px] text-sm font-bold ${index % 3 === 1 ? 'bg-teal-50 text-teal-700' : index % 3 === 2 ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'}`}>{project.name.slice(0, 1).toUpperCase()}</span><span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-500">{project.handover_count ? 'Handover ready' : 'In progress'}</span></div><h2 className="mt-4 line-clamp-1 text-base font-semibold text-slate-900">{project.name}</h2><p className="mt-1 line-clamp-2 min-h-10 text-xs leading-5 text-slate-500">{project.description || 'Project knowledge and source-backed updates.'}</p><div className="mt-4 grid grid-cols-3 border-y border-slate-100 py-3 text-center"><div><strong className="block text-sm text-slate-800">{project.source_count}</strong><span className="text-[10px] text-slate-400">Sources</span></div><div><strong className="block text-sm text-slate-800">{project.knowledge_count}</strong><span className="text-[10px] text-slate-400">Insights</span></div><div><strong className="block text-sm text-slate-800">{project.members.length}</strong><span className="text-[10px] text-slate-400">Teammates</span></div></div><div className="mt-3 flex min-h-7 items-center gap-1.5">{project.members.slice(0, 3).map((member, memberIndex) => <span key={member.full_name} title={`${member.full_name} · ${member.role}`} className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-[9px] font-semibold ${['bg-indigo-100 text-indigo-700','bg-teal-100 text-teal-700','bg-amber-100 text-amber-700'][memberIndex % 3]}`}>{member.full_name.split(/\s+/).map(part => part[0]).slice(0, 2).join('')}</span>)}<span className="ml-1 text-[10px] text-slate-500">{project.members.length ? project.members.map(member => member.full_name.split(' ')[0]).join(', ') : 'Just you'}</span></div><Link to={`/projects/${project.id}`} className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-600 transition group-hover:bg-indigo-600 group-hover:text-white">Open workspace <span aria-hidden="true">→</span></Link></div></article>)}</div> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-lg font-bold text-indigo-600">+</div><h2 className="mt-4 font-semibold text-slate-800">{search ? 'No matching projects' : 'Your portfolio starts here'}</h2><p className="mt-1 text-sm text-slate-500">{search ? 'Try a different search term.' : 'Create a workspace and bring project decisions into one place.'}</p>{!search && <Link to="/projects/create" className="mt-4 inline-flex rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white">Create your first project</Link>}</div>}
+  </div>
 }

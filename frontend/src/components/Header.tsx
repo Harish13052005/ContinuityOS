@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from './auth'
+import { useAuth } from '../lib/auth'
+import { api } from '../lib/api'
 
 export const Header = () => {
   const { user, loading } = useAuth()
@@ -42,8 +43,8 @@ export const Header = () => {
           {user ? (
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-sm font-medium text-slate-900">{user.full_name}</span>
-              <svg className="w-2.5 h-2.5 shrink-0 bg-slate-500 rounded-full" aria-hidden="true" />
-            </span>
+              <span className="w-2.5 h-2.5 shrink-0 bg-slate-500 rounded-full" aria-hidden="true" />
+            </div>
           ) : (
             <button onClick={() => navigate('/login')} className="text-sm font-medium text-indigo-600 underline">
               Sign in

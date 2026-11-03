@@ -5,25 +5,30 @@ services:
     image: postgres:16
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: continuityos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment}
+      POSTGRES_DB: ${POSTGRES_DB:-continuityos}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   backend:
     build: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     environment:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/continuityos
-      SECRET_KEY: change-me-in-production
+      DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the environment}@postgres:5432/${POSTGRES_DB:-continuityos}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in the environment}
+      ENVIRONMENT: production
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-    volumes:
-      - ./backend:/app
+      postgres:
+        condition: service_healthy
 
   frontend:
     build: ./frontend

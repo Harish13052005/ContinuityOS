@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from datetime import datetime
+from pydantic import BaseModel, Field
 
 
 class SourceBase(BaseModel):
@@ -8,13 +9,18 @@ class SourceBase(BaseModel):
 
 
 class SourceCreate(SourceBase):
-    uploaded_by: str
+    pass
 
 
 class SourceRead(SourceBase):
     id: str
     project_id: str
     uploaded_by: str
-    created_at: str
+    created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class SourceList(BaseModel):
+    sources: list[SourceRead] = Field(default_factory=list)
+    total: int

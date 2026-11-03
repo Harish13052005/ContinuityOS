@@ -1,135 +1,27 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { Link, useNavigate } from 'react-router-dom'
+import { api } from '../../lib/api'
 
 export const RegisterPage = () => {
   const [email, setEmail] = useState('')
-  const [full_name, setFullName] = useState('')
+  const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const navigate = useNavigate()
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
-
-    try {
-      await api.auth.register({ email, full_name, password })
-      setSuccess(true)
-      setTimeout(() => navigate('/login'), 2000)
-    } catch (err: any) {
-      setError(err.message || 'Registration failed')
-    } finally {
-      setLoading(false)
-    }
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (password !== confirmPassword) { setError('Passwords do not match.'); return }
+    setLoading(true); setError(null)
+    try { await api.auth.register({ email, full_name: fullName, password }); setSuccess(true); window.setTimeout(() => navigate('/login'), 1800) }
+    catch (err) { setError(err instanceof Error ? err.message : 'Registration failed. Please try again.') }
+    finally { setLoading(false) }
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-8">
-      <div className="max-w-md w-full space-y-6 bg-white rounded-lg p-8 sm:p-10 shadow-xl">
-        <h2 className="text-2xl font-bold text-slate-900 text-center">Create Account</h2>
-
-        {!success && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="you@company.com"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="full_name" className="block text-sm font-medium text-slate-700 mb-1">
-                Full name
-              </label>
-              <input
-                id="full_name"
-                type="text"
-                value={full_name}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="John Doe"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="confirm_password" className="block text-sm font-medium text-slate-700 mb-1">
-                Confirm password
-              </label>
-              <input
-                id="confirm_password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-3 rounded-md">
-                <p className="font-medium">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating...' : 'Create account'}
-            </button>
-          </form>
-        )}
-
-        {success && (
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-indigo-100 mx-auto my-4 flex items-center justify-center">
-              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900">Account Created!</h3>
-            <p className="text-slate-500">Your account has been successfully created. Please log in.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  return <main className="grid min-h-screen bg-white lg:grid-cols-[1.05fr_.95fr]">
+    <section className="relative isolate hidden overflow-hidden bg-[#202445] px-12 py-10 text-white lg:flex lg:flex-col lg:justify-between xl:px-20"><div aria-hidden="true" className="absolute -right-32 top-[-5rem] -z-10 h-[34rem] w-[34rem] rounded-full border border-white/[.08]"/><div aria-hidden="true" className="absolute -right-12 top-12 -z-10 h-[27rem] w-[27rem] rounded-full border border-white/[.08]"/><div aria-hidden="true" className="absolute bottom-[-8rem] left-[-8rem] -z-10 h-96 w-96 rounded-full bg-teal-500/20 blur-3xl"/><Link to="/login" className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-white/10 text-sm font-bold">C<span className="text-teal-300">.</span></span><span><strong className="block text-sm">Continuity<span className="text-teal-300">OS</span></strong><small className="text-[10px] uppercase tracking-[.15em] text-indigo-200">Project memory</small></span></Link><div className="max-w-xl"><span className="text-xs font-semibold uppercase tracking-[.14em] text-teal-200">A clearer way to keep work moving</span><h1 className="mt-5 text-5xl font-semibold leading-[1.12] tracking-tight xl:text-6xl">Start with the context.</h1><p className="mt-5 max-w-lg text-base leading-7 text-slate-300">Create a workspace for the decisions, evidence, and next steps your team needs to carry work forward.</p><div className="mt-8 flex flex-wrap gap-2"><span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-indigo-100">Connected project sources</span><span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-indigo-100">Decision history</span><span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-indigo-100">Shareable handovers</span></div></div><p className="text-xs text-slate-400">A little context makes every next step easier.</p></section>
+    <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-10"><div className="w-full max-w-[420px]"><Link to="/login" className="mb-8 flex items-center gap-2.5 lg:hidden"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#202445] text-sm font-bold text-white">C<span className="text-teal-300">.</span></span><strong className="text-sm">Continuity<span className="text-indigo-600">OS</span></strong></Link><div className="mb-7"><p className="text-xs font-semibold uppercase tracking-[.14em] text-indigo-600">Create your workspace</p><h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Get started</h2><p className="mt-2 text-sm text-slate-500">Your project memory starts with a few details.</p></div>{success ? <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-lg text-emerald-700">✓</span><h3 className="mt-3 font-semibold text-emerald-900">Account created</h3><p className="mt-1 text-sm text-emerald-800">Taking you to sign in…</p></div> : <form onSubmit={handleSubmit} className="space-y-4"><div><label htmlFor="full_name" className="mb-1.5 block text-xs font-semibold text-slate-700">Your name</label><input id="full_name" type="text" autoComplete="name" value={fullName} onChange={event => setFullName(event.target.value)} required className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50" placeholder="Harish Kumar" /></div><div><label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-slate-700">Work email</label><input id="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50" placeholder="you@company.com" /></div><div><label htmlFor="password" className="mb-1.5 block text-xs font-semibold text-slate-700">Password</label><input id="password" type="password" autoComplete="new-password" minLength={8} value={password} onChange={event => setPassword(event.target.value)} required className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50" placeholder="At least 8 characters" /></div><div><label htmlFor="confirm_password" className="mb-1.5 block text-xs font-semibold text-slate-700">Confirm password</label><input id="confirm_password" type="password" autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} required className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50" placeholder="Enter it again" /></div>{error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-sm text-rose-700">{error}</div>}<button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#242852] px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-800 disabled:opacity-60">{loading ? 'Creating account…' : 'Create account'}{!loading && <span aria-hidden="true">→</span>}</button></form>}<p className="mt-6 text-center text-sm text-slate-500">Already have an account? <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-800">Sign in</Link></p></div></section>
+  </main>
 }

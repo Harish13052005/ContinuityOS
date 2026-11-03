@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../../lib/api'
+import { api, type ExtractedItem } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -8,7 +8,7 @@ export const InsightsPage = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
 
-  const [extractedItems, setExtractedItems] = useState([])
+  const [extractedItems, setExtractedItems] = useState<ExtractedItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

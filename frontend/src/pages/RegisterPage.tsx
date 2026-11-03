@@ -92,7 +92,7 @@ export const RegisterPage = () => {
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              minLength="6"
+              minLength={6}
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
@@ -106,7 +106,7 @@ export const RegisterPage = () => {
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               required
-              minLength="6"
+              minLength={6}
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>

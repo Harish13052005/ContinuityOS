@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app import models  # noqa: F401
 
 app = FastAPI(title=settings.PROJECT_NAME, version="0.1.0")
 
@@ -22,5 +23,3 @@ def root_health():
 
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
-
-app.include_router(extraction_router, prefix=settings.API_V1_STR)

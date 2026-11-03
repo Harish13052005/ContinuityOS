@@ -4,12 +4,12 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import create_access_token, decode_access_token, blacklist_token, is_token_blacklisted, get_password_hash, verify_password
 from app.models.user import User
-from app.schemas.user import Token, UserCreate, UserRead
+from app.schemas.user import Token, UserCreate, UserRead, UserUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
@@ -41,7 +41,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     user = User(
-        email=payload.email,
+        email=str(payload.email).lower(),
         full_name=payload.full_name,
         role="member",
         hashed_password=get_password_hash(payload.password),
@@ -54,7 +54,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == form_data.username).first()
+    user = db.query(User).filter(User.email == form_data.username.lower()).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     # Include JTI (JWT ID) for token invalidation/logout
@@ -78,4 +78,15 @@ def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserRead)
 def read_current_user(current_user: User = Depends(get_current_user)):
     """Return the current authenticated user's profile."""
+    return current_user
+
+
+@router.patch("/me", response_model=UserRead)
+def update_current_user(payload: UserUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    full_name = payload.full_name.strip()
+    if not full_name:
+        raise HTTPException(status_code=422, detail="Full name cannot be empty")
+    current_user.full_name = full_name
+    db.commit()
+    db.refresh(current_user)
     return current_user

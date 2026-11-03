@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { api } from '../lib/api'
-import { useAuth } from '../lib/auth'
+import { api, type Project } from '../../lib/api'
+import { useAuth } from '../../lib/auth'
 import { useNavigate } from 'react-router-dom'
 
 export const ProjectsPage = () => {
   const { user } = useAuth()
-  const [projects, setProjects] = useState([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
