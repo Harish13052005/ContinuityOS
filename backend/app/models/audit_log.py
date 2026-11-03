@@ -13,7 +13,7 @@ class AuditLog(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    project_id = Column(String(36), ForeignKey("projects.id"), nullable=False)
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=False, index=True)
     action = Column(String(100), nullable=False)  # e.g., create, update, delete, upload, approve
     entity_type = Column(String(50), nullable=False)  # e.g., user, project, source, extracted_item, evidence, handover
     entity_id = Column(String(36), nullable=False)

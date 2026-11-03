@@ -1,13 +1,17 @@
 """Authentication endpoints for ContinuityOS."""
 
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import create_access_token, decode_access_token, blacklist_token, is_token_blacklisted, get_password_hash, verify_password
+from app.core.security import create_access_token, decode_access_token, get_password_hash, verify_password
+from app.models.token_revocation import TokenRevocation
+from datetime import timedelta
 from app.models.user import User
 from app.schemas.user import Token, UserCreate, UserRead, UserUpdate
 
@@ -22,7 +26,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise HTTPException(status_code=401, detail="Invalid authentication credentials")
     
     jti = payload.get("jti")
-    if jti and is_token_blacklisted(jti):
+    if jti and db.get(TokenRevocation, jti) is not None:
         raise HTTPException(status_code=401, detail="Token has been revoked (logged out)")
     
     subject = payload.get("sub")
@@ -31,7 +35,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     
     user = db.query(User).filter(User.id == subject).first()
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
     return user
 
 
@@ -54,6 +58,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    db.execute(delete(TokenRevocation).where(TokenRevocation.expires_at < datetime.now(timezone.utc) - timedelta(days=1)))
     user = db.query(User).filter(User.email == form_data.username.lower()).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Incorrect email or password")
@@ -67,11 +72,17 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def logout(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """Blacklist the current token to invalidate it."""
     payload = decode_access_token(token)
-    if payload is None or is_token_blacklisted(payload.get("jti", "")):
+    if payload is None:
         raise HTTPException(status_code=400, detail="Invalid or already revoked token")
     jti = payload.get("jti")
-    if jti:
-        blacklist_token(jti)
+    if not jti:
+        raise HTTPException(status_code=400, detail="Token cannot be revoked")
+    if db.get(TokenRevocation, jti) is not None:
+        raise HTTPException(status_code=400, detail="Invalid or already revoked token")
+    expiry = payload.get("exp")
+    expires_at = datetime.fromtimestamp(expiry, tz=timezone.utc) if expiry else datetime.now(timezone.utc)
+    db.add(TokenRevocation(jti=jti, expires_at=expires_at))
+    db.commit()
     return {"detail": "Successfully logged out"}
 
 

@@ -16,6 +16,7 @@ ITEM_TYPES = {
     "milestone": re.compile(r"\b(milestone|launch|release|deadline)\b", re.I),
     "responsibility": re.compile(r"\b(owner|responsible|assigned to)\b", re.I),
 }
+ALLOWED_ITEM_TYPES = set(ITEM_TYPES)
 
 
 def _rule_based_extract(content: str, filename: str, source_type: str) -> dict:
@@ -45,6 +46,7 @@ def extract_from_source(
     content: str,
     uploaded_by: str,
     db_session: Any,
+    evidence_chunks: list[str] | None = None,
 ) -> dict:
     result = extract_knowledge(content, source_filename, source_type)
     if result.get("error") == "No LLM API configured":
@@ -58,18 +60,29 @@ def extract_from_source(
     created = []
     try:
         for item in result.get("items", []):
-            excerpt = item.get("evidence_excerpt")
-            if not excerpt or excerpt not in content:
+            if not isinstance(item, dict) or item.get("item_type") not in ALLOWED_ITEM_TYPES:
                 continue
+            excerpt = item.get("evidence_excerpt")
+            if not isinstance(excerpt, str) or not excerpt.strip() or excerpt not in content:
+                continue
+            title = item.get("title")
+            statement = item.get("content")
+            if not isinstance(title, str) or not isinstance(statement, str) or not title.strip() or not statement.strip():
+                continue
+            confidence_value = item.get("confidence", 50)
+            confidence = confidence_value if isinstance(confidence_value, int) and not isinstance(confidence_value, bool) else 50
+            chunks = evidence_chunks or [content]
+            chunk_index = next((i for i, chunk in enumerate(chunks) if excerpt in chunk), None)
             extracted = ExtractedItem(
                 id=str(uuid.uuid4()),
                 project_id=project_id,
                 source_id=source_id,
                 item_type=item["item_type"],
-                title=item["title"][:255],
-                content=item["content"],
-                confidence=max(0, min(100, int(item.get("confidence", 50)))),
-                verification_status=item.get("verification_status", "unverified"),
+                title=title.strip()[:255],
+                content=statement.strip()[:10000],
+                confidence=max(0, min(100, confidence)),
+                # Model output cannot verify or approve its own claims.
+                verification_status="unverified",
             )
             db_session.add(extracted)
             db_session.flush()
@@ -78,6 +91,8 @@ def extract_from_source(
                 extracted_item_id=extracted.id,
                 source_id=source_id,
                 excerpt=excerpt[:500],
+                page_number=chunk_index + 1 if source_type == "pdf" and chunk_index is not None else None,
+                location_reference=f"Page {chunk_index + 1}" if source_type == "pdf" and chunk_index is not None else source_filename,
             ))
             created.append({"extracted_item_id": extracted.id, "item_type": extracted.item_type, "title": extracted.title})
         db_session.commit()

@@ -35,3 +35,17 @@ def test_create_and_list_projects(client):
     )
     assert r.status_code == 200
     assert len(r.json()) >= 1
+
+
+def test_logout_revokes_token_persistently(client):
+    client.post("/api/v1/auth/register", json={
+        "email": "logout@example.com",
+        "full_name": "Logout User",
+        "password": "secret123",
+    })
+    login = client.post("/api/v1/auth/login", data={"username": "logout@example.com", "password": "secret123"})
+    token = login.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/v1/auth/me", headers=headers).status_code == 200
+    assert client.post("/api/v1/auth/logout", headers=headers).status_code == 200
+    assert client.get("/api/v1/auth/me", headers=headers).status_code == 401

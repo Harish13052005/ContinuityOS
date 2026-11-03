@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlalchemy import Column, DateTime, ForeignKey, String, UniqueConstraint
 
 from app.core.database import Base
 
@@ -18,5 +18,6 @@ class ProjectMember(Base):
     joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_member_project_user"),
         {"sqlite_autoincrement": False},
     )

@@ -1,7 +1,7 @@
 """OpenAI GPT provider for ContinuityOS AI extraction."""
 
-import os
 from typing import Optional
+from app.core.config import settings
 
 try:
     import openai
@@ -15,8 +15,8 @@ class OpenAIProvider(LLMProvider):
     """OpenAI GPT provider implementation."""
 
     def __init__(self) -> None:
-        self.api_key = os.environ.get("OPENAI_API_KEY", "")
-        self.model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+        self.api_key = settings.OPENAI_API_KEY
+        self.model = settings.OPENAI_MODEL
         self._client = openai.OpenAI(api_key=self.api_key) if self.api_key and openai else None
 
     @property

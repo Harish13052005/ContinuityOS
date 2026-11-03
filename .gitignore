@@ -6,3 +6,4 @@ backend/storage/
 backend/.runtime.db
 backend/.runtime.db-shm
 backend/.runtime.db-wal
+backend/.env

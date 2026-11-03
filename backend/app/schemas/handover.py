@@ -1,10 +1,13 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+import json
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class HandoverCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
+    recipient_email: str | None = Field(default=None, max_length=255)
 
 
 class HandoverRead(BaseModel):
@@ -26,5 +29,16 @@ class HandoverRead(BaseModel):
     milestones: str | None = None
     next_actions: str | None = None
     missing_conflicting: str | None = None
+    supporting_evidence: list[dict] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
+
+    @field_validator("supporting_evidence", mode="before")
+    @classmethod
+    def parse_supporting_evidence(cls, value):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except (TypeError, json.JSONDecodeError):
+                return []
+        return value or []

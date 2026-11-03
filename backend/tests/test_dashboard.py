@@ -37,5 +37,6 @@ def test_dashboard_aggregates_owner_workspace_and_handover_has_sections(client):
     assert handover.status_code == 201
     report = handover.json()
     assert "modular services" in report["decisions"]
-    assert "migration plan" in report["pending_tasks"]
+    assert "No tasks" in report["pending_tasks"]
+    assert "Publish the plan" in report["missing_conflicting"]
     assert report["project_overview"] == "Platform work"

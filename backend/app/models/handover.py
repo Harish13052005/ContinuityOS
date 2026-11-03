@@ -12,7 +12,7 @@ class Handover(Base):
     __tablename__ = "handovers"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(String(36), ForeignKey("projects.id"), nullable=False)
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
     status = Column(String(20), default="draft", nullable=False)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=False)
@@ -33,3 +33,4 @@ class Handover(Base):
     recipient_permissions = Column(Text, nullable=True)
     next_actions = Column(Text, nullable=True)
     missing_conflicting = Column(Text, nullable=True)
+    supporting_evidence = Column(Text, nullable=True)

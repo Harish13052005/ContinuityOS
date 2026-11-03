@@ -11,6 +11,7 @@ from app.api.v1.endpoints.reconstruction import router as reconstruction_router
 from app.api.v1.endpoints.extracted_items import router as extracted_items_router
 from app.api.v1.endpoints.handover import router as handover_router
 from app.api.v1.endpoints.dashboard import router as dashboard_router
+from app.api.v1.endpoints.audit import router as audit_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -22,3 +23,4 @@ api_router.include_router(reconstruction_router)
 api_router.include_router(extracted_items_router)
 api_router.include_router(handover_router)
 api_router.include_router(dashboard_router)
+api_router.include_router(audit_router)

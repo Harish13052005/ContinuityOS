@@ -13,14 +13,17 @@ export interface ErrorResponse {
   errors?: Record<string, string[]>
 }
 
-export interface Project { id: string; name: string; description?: string | null; created_at?: string; members?: unknown[] }
+export interface Project { id: string; name: string; description?: string | null; owner_id?: string; current_user_role?: string | null; created_at?: string; members?: unknown[] }
 export interface Source { id: string; filename: string; source_type: string; created_at: string; page_count?: number }
-export interface ExtractedItem { id: string; title: string; item_type: string; content: string; confidence?: number; verification_status?: string; created_at: string }
+export interface ProjectMember { id: string; user_id: string; email: string; full_name: string; project_role: string; joined_at: string }
+export interface ExtractedItem { id: string; title: string; item_type: string; content: string; confidence?: number; verification_status?: string; created_at: string; original_content?: string | null; review_reason?: string | null }
 export interface Handover {
   id: string; project_id: string; title: string; status: string; version: number; created_at: string
+  recipient_email?: string | null; recipient_name?: string | null
   project_overview?: string | null; current_status?: string | null; decisions?: string | null
   pending_tasks?: string | null; dependencies_blockers?: string | null; risks_questions?: string | null
   milestones?: string | null; next_actions?: string | null; missing_conflicting?: string | null
+  supporting_evidence?: { item_id: string; title: string; source: string; excerpt: string; page_number?: number | null; location_reference?: string | null }[]
 }
 export interface DashboardProject extends Project { source_count: number; knowledge_count: number; handover_count: number; members: { full_name: string; role: string }[] }
 export interface DashboardData {
@@ -101,6 +104,18 @@ export const api = {
       fetch(`${API_BASE}/api/v1/projects/${projectId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }).then(handleResponse),
+
+    members: (projectId: string) => fetch(`${API_BASE}/api/v1/projects/${projectId}/members`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
+
+    invite: (projectId: string, payload: { email: string; project_role: 'admin' | 'reviewer' | 'contributor' }) => fetch(`${API_BASE}/api/v1/projects/${projectId}/members`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify(payload),
+    }).then(handleResponse),
+
+    removeMember: (projectId: string, userId: string) => fetch(`${API_BASE}/api/v1/projects/${projectId}/members/${userId}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
   },
 
   // Source endpoints
@@ -135,6 +150,10 @@ export const api = {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       }).then(handleResponse),
+
+    preview: (sourceId: string) => fetch(`${API_BASE}/api/v1/sources/${sourceId}/preview`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
   },
 
   // Extracted items endpoints
@@ -168,6 +187,15 @@ export const api = {
         },
         body: JSON.stringify(payload),
       }).then(handleResponse),
+
+    review: (projectId: string, itemId: string, payload: { verification_status: 'supported' | 'needs_review' | 'conflicting' | 'stale' | 'unverified'; review_reason: string; title?: string; content?: string }) =>
+      fetch(`${API_BASE}/api/v1/projects/${projectId}/extracted-items/${itemId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify(payload),
+      }).then(handleResponse),
+
+    evidence: (projectId: string, itemId: string) => fetch(`${API_BASE}/api/v1/projects/${projectId}/extracted-items/${itemId}/evidence`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
   },
 
   extraction: {
@@ -191,6 +219,7 @@ export const api = {
     create: (projectId: string, payload: {
       title: string
       status?: string
+      recipient_email?: string
     }) =>
       fetch(`${API_BASE}/api/v1/projects/${projectId}/handovers`, {
         method: 'POST',
@@ -200,6 +229,22 @@ export const api = {
         },
         body: JSON.stringify(payload),
       }).then(handleResponse),
+
+    approve: (handoverId: string) => fetch(`${API_BASE}/api/v1/handovers/${handoverId}/approve`, {
+      method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(handleResponse),
+
+    share: (handoverId: string, recipient_email: string) => fetch(`${API_BASE}/api/v1/handovers/${handoverId}/share`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ recipient_email }),
+    }).then(handleResponse),
+
+    exportPdf: (handoverId: string) => fetch(`${API_BASE}/api/v1/handovers/${handoverId}/export.pdf`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+    }).then(async response => {
+      if (!response.ok) throw new Error((await response.json().catch(() => null))?.detail || 'Could not export PDF')
+      return response.blob()
+    }),
   },
 
   // Evidence endpoints

@@ -12,8 +12,8 @@ class Evidence(Base):
     __tablename__ = "evidence"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    extracted_item_id = Column(String(36), ForeignKey("extracted_items.id"), nullable=False)
-    source_id = Column(String(36), ForeignKey("sources.id"), nullable=False)
+    extracted_item_id = Column(String(36), ForeignKey("extracted_items.id"), nullable=False, index=True)
+    source_id = Column(String(36), ForeignKey("sources.id"), nullable=False, index=True)
     page_number = Column(Integer, nullable=True)
     location_reference = Column(String(255), nullable=True)  # e.g., "section 3.2, footnote 5"
     excerpt = Column(Text, nullable=False)

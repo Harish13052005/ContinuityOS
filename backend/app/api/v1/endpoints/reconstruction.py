@@ -40,15 +40,15 @@ async def get_project_reconstruction(
         raise HTTPException(status_code=404, detail="Project not found")
     
     is_owner = project.owner_id == current_user.id
-    is_member = any(pm.user_id == current_user.id for pm in project.members)
-    if not (is_owner or is_member):
+    is_member = any(pm.user_id == current_user.id and pm.project_role.lower() != "recipient" for pm in project.members)
+    if not (is_owner or is_member or current_user.role == "admin"):
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Reconstruct project state
     try:
         reconstruction = reconstruct_project_state(project_id, db)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Reconstruction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Project reconstruction failed") from e
     
     return ProjectReconstructionResponse(
         project_id=project_id,

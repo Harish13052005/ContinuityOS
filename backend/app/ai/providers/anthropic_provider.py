@@ -1,7 +1,7 @@
 """Anthropic Claude provider for ContinuityOS AI extraction."""
 
-import os
 from typing import Optional
+from app.core.config import settings
 
 try:
     import anthropic
@@ -15,8 +15,8 @@ class AnthropicProvider(LLMProvider):
     """Anthropic Claude provider implementation."""
 
     def __init__(self) -> None:
-        self.api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        self.model = os.environ.get("ANTHROPIC_MODEL", "claude-3-5-sonnet-20240620")
+        self.api_key = settings.ANTHROPIC_API_KEY
+        self.model = settings.ANTHROPIC_MODEL
         self._client = anthropic.Anthropic(api_key=self.api_key) if (self.api_key and anthropic) else None
 
     @property

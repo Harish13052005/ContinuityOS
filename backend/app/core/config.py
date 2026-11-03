@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000"
     STORAGE_DIR: str = "storage"
     ENVIRONMENT: str = "development"
+    LLM_PROVIDER: str = ""
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20240620"
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 

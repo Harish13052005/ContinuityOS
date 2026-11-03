@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Set
+from typing import Any
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -7,10 +7,6 @@ from passlib.context import CryptContext
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-
-# Token blacklist for logout/invalidation (in-memory; use Redis in production)
-BLACKLISTED_TOKENS: Set[str] = set()
-
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
@@ -38,13 +34,3 @@ def decode_access_token(token: str) -> dict | None:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except JWTError:
         return None
-
-
-def is_token_blacklisted(jti: str) -> bool:
-    """Check if a token's JTI (JWT ID) is blacklisted (logged out/invalidated)."""
-    return jti in BLACKLISTED_TOKENS
-
-
-def blacklist_token(jti: str) -> None:
-    """Add a token JTI to the blacklist to invalidate it."""
-    BLACKLISTED_TOKENS.add(jti)

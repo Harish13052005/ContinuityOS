@@ -1,5 +1,6 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from typing import Literal
+from pydantic import BaseModel, EmailStr, Field
 
 
 class ProjectBase(BaseModel):
@@ -15,6 +16,7 @@ class ProjectRead(ProjectBase):
     id: str
     owner_id: str
     created_at: datetime
+    current_user_role: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -28,8 +30,15 @@ class ProjectMemberCreate(ProjectMemberBase):
     pass
 
 
+class ProjectMemberInvite(BaseModel):
+    email: EmailStr
+    project_role: Literal["admin", "reviewer", "contributor"] = "contributor"
+
+
 class ProjectMemberRead(ProjectMemberBase):
     id: str
     joined_at: str
+    email: EmailStr | None = None
+    full_name: str | None = None
 
     model_config = {"from_attributes": True}

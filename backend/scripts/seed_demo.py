@@ -5,6 +5,7 @@ Run from backend: python -m scripts.seed_demo. It never reads or changes a passw
 from __future__ import annotations
 
 import uuid
+import json
 from pathlib import Path
 
 from sqlalchemy import delete, select
@@ -26,6 +27,10 @@ PROJECTS = [
     {"name": "ParkSense", "description": "A parking operations system with compatible bay allocation, customer reservations, check-in and check-out, simulated advance payments, employee discounts, and occupancy analytics.", "legacy": "AI Support Operations Pilot", "legacy_handover": "AI Support pilot operations handover", "repo": "https://github.com/Harish13052005/ParkSense", "members": [1, 2], "sources": [
         ("parksense-operations.md", "# ParkSense operations\nSource: public repository README and presentation.\nDemo configuration: 400 parking bays across two-wheeler, three-wheeler, and four-wheeler categories.\nFeature: assign the nearest compatible available bay and support check-in and check-out.\nFeature: customer views include vehicles, reservations, and visit history.\nTask: check that bay status remains consistent during arrival and departure.\nRisk: real-time availability depends on accurate operational updates."),
         ("parksense-pricing-and-analytics.md", "# Reservations and operations analytics\nReservations support advance booking and a simulated payment step; no payment provider is charged.\nFeature: employee records can receive configured discounts.\nFeature: administrator views show bay occupancy, parking inventory, visit history, and revenue summaries.\nTask: review utilization and revenue filters before exporting visit history.\nQuestion: what reservation window best balances convenience and bay availability?\nMilestone: demonstrate customer booking and the operator bay map as separate workflows.")], "handover": "ParkSense reviewer handover"},
+    {"name": "ContinuityOS Reviewer Walkthrough", "description": "A synthetic evaluation workspace for demonstrating source-backed review, conflicting statements, stale dates, missing task ownership, approved handovers, and private-source filtering.", "legacy": None, "legacy_handover": None, "members": [0, 1], "member_roles": {0: "reviewer", 1: "contributor"}, "sources": [
+        ("synthetic-project-brief.md", "# Synthetic review scenario\nThis is fictional demonstration data created for product evaluation. It contains no customer or confidential information.\nTask: Prepare a reviewer checklist for the pilot source library.\nDependency: Document review depends on the team agreeing an evidence retention policy.\nRisk: Uploaded notes might contain untrusted instructions that must remain source content.\nQuestion: Who will own the first reviewer onboarding session?"),
+        ("synthetic-review-notes.md", "# Synthetic review notes\nDecision: The pilot notes will be retained for 30 days after approval.\nDecision: The pilot notes will not be retained for 30 days after approval.\nMilestone: Original pilot target was 2026-06-01 (outdated; confirm a new date).\nTask: Confirm which retention statement is current before sharing the report."),
+        ("synthetic-private-sample.md", "# Restricted synthetic source\nThis synthetic private note exists only to demonstrate source access filtering.\nRisk: A sample restricted issue that must not appear in a recipient handover.", "private")], "handover": "Synthetic reviewer walkthrough handover"},
 ]
 
 
@@ -54,8 +59,12 @@ def main() -> None:
                 db.flush()
             project.name, project.description = spec["name"], spec["description"]
             for idx in spec["members"]:
+                role = spec.get("member_roles", {}).get(idx, PEOPLE[idx][2])
                 if db.scalar(select(ProjectMember).where(ProjectMember.project_id == project.id, ProjectMember.user_id == accounts[idx].id)) is None:
-                    db.add(ProjectMember(project_id=project.id, user_id=accounts[idx].id, project_role=PEOPLE[idx][2]))
+                    db.add(ProjectMember(project_id=project.id, user_id=accounts[idx].id, project_role=role))
+                elif spec.get("member_roles", {}).get(idx):
+                    membership = db.scalar(select(ProjectMember).where(ProjectMember.project_id == project.id, ProjectMember.user_id == accounts[idx].id))
+                    membership.project_role = role
 
             # Refresh only files previously created by this demo seeder; uploaded user files are preserved.
             demo_sources = db.scalars(select(Source).where(Source.project_id == project.id, Source.storage_path.like("%demo-%"))).all()
@@ -67,19 +76,29 @@ def main() -> None:
                     db.execute(delete(ExtractedItem).where(ExtractedItem.id.in_(item_ids)))
                 db.execute(delete(Evidence).where(Evidence.source_id.in_(demo_ids)))
                 db.execute(delete(Source).where(Source.id.in_(demo_ids)))
-            for filename, content in spec["sources"]:
+            for source_spec in spec["sources"]:
+                filename, content = source_spec[:2]
+                access_level = source_spec[2] if len(source_spec) > 2 else "project"
                 folder = root / project.id
                 folder.mkdir(parents=True, exist_ok=True)
                 path = folder / f"demo-{filename}"
                 path.write_text(content + "\n", encoding="utf-8")
-                source = Source(project_id=project.id, filename=filename, source_type="markdown", storage_path=str(path), uploaded_by=owner.id, access_level="project")
+                source = Source(project_id=project.id, filename=filename, source_type="markdown", storage_path=str(path), uploaded_by=owner.id, access_level=access_level)
                 db.add(source)
                 db.flush()
                 for line in content.splitlines():
                     clean = line.strip(" \t-#")
                     kind = next((k for k in ("decision", "task", "risk", "blocker", "dependency", "question", "milestone") if clean.lower().startswith(k + ":")), None)
                     if kind and len(clean) >= 12:
-                        item = ExtractedItem(project_id=project.id, source_id=source.id, item_type=kind, title=clean[:120], content=clean, confidence=94, verification_status="verified")
+                        status = "unverified"
+                        if spec["name"] == "ContinuityOS Reviewer Walkthrough":
+                            if kind == "decision" and "retained for 30 days" in clean.lower():
+                                status = "conflicting"
+                            elif "outdated" in clean.lower():
+                                status = "stale"
+                        else:
+                            status = "verified"
+                        item = ExtractedItem(project_id=project.id, source_id=source.id, item_type=kind, title=clean[:120], content=clean, confidence=94, verification_status=status)
                         db.add(item)
                         db.flush()
                         db.add(Evidence(extracted_item_id=item.id, source_id=source.id, excerpt=clean, location_reference=filename))
@@ -93,8 +112,20 @@ def main() -> None:
                 else:
                     db.delete(legacy_handover)
             if handover is None:
-                handover = Handover(project_id=project.id, title=spec["handover"], status="ready", created_by=owner.id)
+                handover = Handover(project_id=project.id, title=spec["handover"], status="draft", created_by=owner.id)
                 db.add(handover)
+            if not handover.approved_by:
+                handover.status = "draft"
+            evidence_rows = db.execute(
+                select(ExtractedItem, Evidence, Source)
+                .join(Evidence, Evidence.extracted_item_id == ExtractedItem.id)
+                .join(Source, Source.id == Evidence.source_id)
+                .where(ExtractedItem.project_id == project.id, ExtractedItem.verification_status == "verified", Source.access_level != "private")
+            ).all()
+            handover.supporting_evidence = json.dumps([
+                {"item_id": item.id, "title": item.title, "source": source.filename, "excerpt": evidence.excerpt, "page_number": evidence.page_number, "location_reference": evidence.location_reference}
+                for item, evidence, source in evidence_rows
+            ])
             handover.project_overview = spec["description"]
             handover.current_status = "Portfolio demo sourced from the public project repository. Review the linked repository and screenshots for implementation details."
             handover.decisions = "Review product decisions captured in the project source notes."
@@ -105,7 +136,7 @@ def main() -> None:
             handover.next_actions = "1. Open the repository link.\n2. Walk through the project screenshots.\n3. Review the source-backed project notes."
             handover.missing_conflicting = "Showcase content is an illustrative summary. Confirm current behavior against the repository before relying on it."
         db.commit()
-        print("Portfolio demo sync complete: 3 public projects, source-backed sample insights, collaborators, and reviewer handovers.")
+        print("Portfolio demo sync complete: 3 public portfolio projects, 1 synthetic review scenario, source-backed sample insights, collaborators, and draft reviewer handovers.")
     finally:
         db.close()
 
