@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api, type DashboardData } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { asList, formatKind, formatStatus, statusTone } from '../lib/format'
@@ -35,10 +35,12 @@ function KnowledgeMix({ rows }: { rows: DashboardData['knowledge_by_type'] }) {
 }
 
 export const Dashboard = () => {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, signOut } = useAuth()
+  const navigate = useNavigate()
   const [data, setData] = useState<DashboardData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -50,6 +52,12 @@ export const Dashboard = () => {
   }, [user])
 
   const projects = useMemo(() => asList<DashboardData['projects'][number]>(data?.projects).filter(project => `${project.name} ${project.description || ''}`.toLowerCase().includes(search.toLowerCase())), [data, search])
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    await signOut()
+    navigate('/login', { replace: true })
+  }
+
   if (error) return <div role="alert" className="card p-5 text-rose-700">{error}</div>
   if (authLoading || !data) return <div className="space-y-5"><div className="h-36 animate-pulse rounded-3xl bg-white"/><div className="h-24 animate-pulse rounded-2xl bg-white/80"/></div>
 
@@ -77,6 +85,9 @@ export const Dashboard = () => {
             <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">Don't just transfer documents. Transfer the understanding needed to continue the work.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={handleSignOut} disabled={signingOut} className="rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-500/20 disabled:cursor-wait disabled:opacity-60">
+              {signingOut ? 'Signing out…' : 'Sign out'}
+            </button>
             <Link to="/sources" className="rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10">Connect sources</Link>
             <Link to="/projects/create" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#171a35] shadow-lg transition hover:-translate-y-0.5 hover:bg-indigo-50"><span className="text-lg leading-none">＋</span> Create project</Link>
           </div>
