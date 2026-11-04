@@ -6,6 +6,12 @@ ContinuityOS is an evidence-driven project knowledge and handover platform. It t
 
 *Animated product walkthrough. The original recording is optimized here for inline display in the GitHub README.*
 
+## Live demo
+
+**[Open ContinuityOS](https://continuityos-web.onrender.com)**
+
+Create an account to try the hosted app; it does not use the local showcase database. This demo runs on Render's free tier: the API may sleep when idle, uploaded files are temporary, and the free PostgreSQL database expires after 30 days. Do not upload sensitive or production data.
+
 ## Features
 
 - Create project workspaces and invite project members with contributor or reviewer roles.
@@ -100,4 +106,4 @@ The app is then available at [http://localhost:5173](http://localhost:5173). Com
 - Optional AI extraction uses `LLM_PROVIDER`, `OPENAI_API_KEY` / `OPENAI_MODEL`, or `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL`. Never commit provider keys or production secrets.
 - Generated claims remain unverified until human review. Conflict and staleness detection are heuristic prompts for review, not automatic judgments about which claim is correct.
 - Scanned-image OCR, password-protected PDFs, PDFs over 500 pages, and DOCX archives expanding beyond 50 MB are unsupported.
-- No live deployment is configured for this repository. Production hosting, managed object storage, email delivery, password reset, and asynchronous processing are not included.
+- The hosted app is a free-tier demo, not a production deployment. Durable object storage, email delivery, password reset, and asynchronous processing are not included.
