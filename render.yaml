@@ -1,11 +1,12 @@
 services:
   - type: web
     name: continuityos-api
-    runtime: docker
+    runtime: python
     region: oregon
     plan: free
-    dockerContext: ./backend
-    dockerfilePath: ./backend/Dockerfile
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
     envVars:
       - key: DATABASE_URL
@@ -16,6 +17,8 @@ services:
         generateValue: true
       - key: ENVIRONMENT
         value: production
+      - key: PYTHON_VERSION
+        value: 3.12.10
       - key: STORAGE_DIR
         value: /tmp/continuityos-storage
       - key: BACKEND_CORS_ORIGINS
