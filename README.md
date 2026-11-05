@@ -10,7 +10,6 @@ ContinuityOS is an evidence-driven project knowledge and handover platform. It t
 
 **[Open ContinuityOS](https://continuityos-web.onrender.com)**
 
-Create an account to try the hosted app; it does not use the local showcase database. This demo runs on Render's free tier: the API may sleep when idle, uploaded files are temporary, and the free PostgreSQL database expires after 30 days. Do not upload sensitive or production data.
 
 ## Features
 
